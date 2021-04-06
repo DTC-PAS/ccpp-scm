@@ -1,6 +1,14 @@
 #!/bin/bash
 
-set -u
+#                                                                        
+#----------------------------------------------------------------------- 
+#                                                                        
+# Save current shell options (in a global array).  Then set new options  
+# for this script/function.                                              
+#                                                                        
+#----------------------------------------------------------------------- 
+#                                                                        
+{ save_shell_opts; set -u +x; } > /dev/null 2>&1                         
 #
 #-----------------------------------------------------------------------
 #
@@ -32,6 +40,15 @@ VERBOSE="TRUE"
 #
 #-----------------------------------------------------------------------
 #
+# Source function used to obtain versions of the case name with and 
+# without a specified suffix.
+#
+#-----------------------------------------------------------------------
+#
+source ${scrfunc_dir}/get_case_name_wwo_suffix.sh
+#
+#-----------------------------------------------------------------------
+#
 # Specify the set of valid command line argument names for this script/
 # function.  Then process the arguments provided to this script/function 
 # (which should consist of a set of name-value pairs of the form 
@@ -39,6 +56,8 @@ VERBOSE="TRUE"
 #
 #-----------------------------------------------------------------------
 #
+#set -x
+echo "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG"
 valid_args=( \
   "base_case_name" \
   "base_suite_name" \
@@ -47,7 +66,22 @@ valid_args=( \
   "resol_km" \
   "dt_sec" \
   )
-process_args valid_args "$@"
+echo "HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH"
+#process_args valid_args "$@"
+ijkl=$( process_args valid_args "$@" )
+echo "ijkl is:"
+echo "$ijkl"
+#echo "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+##echo "base_case_name = \"${base_case_name}\""
+eval $ijkl
+#echo "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"
+#echo "base_case_name = \"${base_case_name}\""
+#exit
+
+#echo "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII"
+#eval $( process_args valid_args "$@" )
+#echo "JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ"
+
 #
 #-----------------------------------------------------------------------
 #
@@ -57,18 +91,6 @@ process_args valid_args "$@"
 #-----------------------------------------------------------------------
 #
 print_input_args valid_args
-#
-#-----------------------------------------------------------------------
-#
-# Set the base directory in which the SCM code has been cloned as well
-# as the full path to the "bin" subdirectory containing executables, 
-# python scripts for running the SCM, and this wrapper script.  In doing
-# so, we assume that this wrapper script is in the "bin" subdirectory.
-#
-#-----------------------------------------------------------------------
-#
-scm_basedir=$( readlink -f "${scrfunc_dir}/../" )
-bin_dir="${scm_basedir}/scm/bin"
 #
 #-----------------------------------------------------------------------
 #
@@ -86,6 +108,10 @@ valid_vals_base_case_name=( \
 "arm_sgp_summer_1997_U" \
 "arm_sgp_summer_1997_X" \
 "twpice" \
+"my_case_01_SCM_driver" \
+"my_case_02_SCM_driver" \
+"my_case_03_SCM_driver" \
+"my_case_04_SCM_driver" \
 )
 
 valid_vals_base_suite_name=( \
@@ -230,6 +256,9 @@ elif [ "${base_suite_name}" = "PAS_RRFS_v1alpha" ]; then
   elif [ "${do_deep_conv}" = "FALSE" ] && \
        [ "${do_shal_conv}" = "TRUE" ]; then
 
+# This case crashed.  Not sure why.  It's the only one that uses the 
+# "gmtb_scm_ideep_0" executable, so that might be related.
+
     suite_name="${base_suite_name}_cumulus"
     conv_suffix="deepGF_off_shalGF_on"
     scm_exec_fn="gmtb_scm_ideep_0"
@@ -257,15 +286,14 @@ fi
 #
 #-----------------------------------------------------------------------
 #
-# Construct the case name that will be passed to the python SCM run script.  
-# We do not include the physics suite in this because that script will
-# automatically append it to the case name to obtain directory names, 
-# etc.
+# Set the base directory in which the SCM code has been cloned as well
+# as the full path to the "bin" subdirectory containing executables, 
+# python scripts for running the SCM, and links to other scripts.
 #
 #-----------------------------------------------------------------------
 #
-case_name="${base_case_name}_dx_${resol_km}km_dt_${dt_sec}sec_${conv_suffix}"
-#case_name="${base_case_name}_dx_${resol_km}km_dt_${dt_sec}sec"
+scm_basedir=$( readlink -f "${scrfunc_dir}/../" )
+bin_dir="${scm_basedir}/scm/bin"
 #
 #-----------------------------------------------------------------------
 #
@@ -278,10 +306,23 @@ case_name="${base_case_name}_dx_${resol_km}km_dt_${dt_sec}sec_${conv_suffix}"
 # files.
 #
 suite_nml_dir="${scm_basedir}/ccpp/physics_namelists"
+
 tmpl_suite_nml_fn="tmpl.input_${base_suite_name}_etc.nml"
 suite_nml_fn="input_${suite_name}.nml"
+
 tmpl_suite_nml_fp="${suite_nml_dir}/${tmpl_suite_nml_fn}"
 suite_nml_fp="${suite_nml_dir}/${suite_nml_fn}"
+#
+# Make sure that the template physics suite namelist file exists.
+#
+if [ ! -f "${tmpl_suite_nml_fp}" ]; then
+  print_err_msg_exit "\
+The template physics suite namelist file (tmpl_suite_nml_fp) for this 
+base suite (base_suite_name) does not exist:
+  base_suite_name = \"${base_suite_name}\"
+  tmpl_suite_nml_fp = \"${tmpl_suite_nml_fp}\"
+Please create such a template file and rerun."
+fi
 #
 # Copy the template suite namelist file into the actual suite namelist 
 # file.
@@ -337,6 +378,71 @@ done
 #
 #-----------------------------------------------------------------------
 #
+# Get the counterparts of the base case name with and without the suffix
+# "_SCM_driver".  Then set a flag that specifies whether or not the base
+# case name passed to this script ends with the suffix.
+#
+#-----------------------------------------------------------------------
+#
+#echo "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM"
+#echo "case_name = \"${case_name}\""
+#echo "case_name_without_suffix = \"${case_name_without_suffix}\""
+#exit
+SCM_driver_suffix="_SCM_driver"
+
+get_case_name_wwo_suffix \
+  case_name="${base_case_name}" \
+  suffix="${SCM_driver_suffix}" \
+  output_varname_case_name_without_suffix="base_case_name_without_suffix" \
+  output_varname_case_name_with_suffix="base_case_name_with_suffix"
+
+# This is just to see if array input arguments still work.
+#get_case_name_wwo_suffix \
+#  case_name="${base_case_name}" \
+#  suffix="( \"_aa\" \"bb\" \"cc\" )" \
+#  output_varname_case_name_without_suffix="base_case_name_without_suffix" \
+#  output_varname_case_name_with_suffix="base_case_name_with_suffix"
+
+echo "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN"
+#echo "case_name = \"${case_name}\""
+#echo "suffix = \"${suffix}\""
+#echo "output_varname_case_name_without_suffix = \"${output_varname_case_name_without_suffix}\""
+#echo "valid_arg_names_0th = \"${valid_arg_names_0th}\""
+#echo "valid_arg_names_str = \"${valid_arg_names_str}\""
+#echo "array_name_valid_arg_names = \"${array_name_valid_arg_names}\""
+#echo "_len_suffix = \"${_len_suffix}\""
+#echo "case_name_without_suffix = \"${case_name_without_suffix}\""
+echo "base_case_name_without_suffix = \"${base_case_name_without_suffix}\""
+echo "base_case_name_with_suffix = \"${base_case_name_with_suffix}\""
+#exit
+
+#local _len_suffix \
+#      _len_case_name \
+#      _len_case_name_without_suffix \
+#      _case_name_suffix \
+#      _case_name_without_suffix \
+#      _case_name_with_suffix
+
+base_case_name_has_suffix="FALSE"
+if [ "${base_case_name}" = "${base_case_name_with_suffix}" ]; then
+  base_case_name_has_suffix="TRUE"
+fi
+#
+#-----------------------------------------------------------------------
+#
+# Construct the case name that will be passed to the python SCM run script.  
+# We do not include the physics suite in this because that script will
+# automatically append it to the case name to obtain directory names, 
+# etc.
+#
+#-----------------------------------------------------------------------
+#
+#case_name="${base_case_name}_dx_${resol_km}km_dt_${dt_sec}sec_${conv_suffix}"
+case_name_without_suffix="${base_case_name_without_suffix}_dx_${resol_km}km_dt_${dt_sec}sec_${conv_suffix}"
+case_name_with_suffix="${case_name_without_suffix}${SCM_driver_suffix}"
+#
+#-----------------------------------------------------------------------
+#
 # Generate the case namelist file by replacing placeholders in a template 
 # namelist file with actual values.  The name of this file must constructed
 # using the same case name that is passed to the run_gmtb_scm.py script
@@ -345,11 +451,35 @@ done
 #
 #-----------------------------------------------------------------------
 #
+echo "OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO"
+#echo "case_name = \"${case_name}\""
+echo "case_name_without_suffix = \"${case_name_without_suffix}\""
+echo "case_name_with_suffix = \"${case_name_with_suffix}\""
+#exit
+
 case_nml_dir="${scm_basedir}/scm/etc/case_config"
-case_nml_fn="${case_name}.nml"
+
 tmpl_case_nml_fn="tmpl.${base_case_name}.nml"
-case_nml_fp="${case_nml_dir}/${case_nml_fn}"
+#if [ "${base_case_name_has_suffix}" = "TRUE" ]; then
+#  case_nml_fn="${case_name_with_suffix}.nml"
+#else
+#  case_nml_fn="${case_name_without_suffix}.nml"
+#fi
+case_nml_fn="${case_name_without_suffix}.nml"
+
 tmpl_case_nml_fp="${case_nml_dir}/${tmpl_case_nml_fn}"
+case_nml_fp="${case_nml_dir}/${case_nml_fn}"
+#
+# Make sure that the template case namelist file exists.
+#
+if [ ! -f "${tmpl_case_nml_fp}" ]; then
+  print_err_msg_exit "\
+The template SCM case namelist file (tmpl_case_nml_fp) for this base case 
+(base_case_name) does not exist:
+  base_case_name = \"${base_case_name}\"
+  tmpl_case_nml_fp = \"${tmpl_case_nml_fp}\"
+Please create such a template file and rerun."
+fi
 #
 # Copy the template case namelist file to the actual case namelist file.
 #
@@ -363,8 +493,12 @@ cp "${tmpl_case_nml_fp}" "${case_nml_fp}"
 #
 # Set the case name in the case namelist file.
 #
+echo "PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP"
+echo "case_name_without_suffix = \"${case_name_without_suffix}\""
+echo "case_name_with_suffix = \"${case_name_with_suffix}\""
+#exit
 regex_search="(^\s*case_name\s*=\s*)(<.*>)(,)\s*$"
-regex_replace="\1""\'${case_name}\'""\3"
+regex_replace="\1""\'${case_name_without_suffix}\'""\3"
 sed -i -r -e "s|${regex_search}|${regex_replace}|" "${case_nml_fp}"
 #
 # Set the time step in the case namelist file.
@@ -390,7 +524,12 @@ sed -i -r -e "s|${regex_search}|${regex_replace}|" "${case_nml_fp}"
 #
 processed_case_input_dir="${scm_basedir}/scm/data/processed_case_input"
 target="${processed_case_input_dir}/${base_case_name}.nc"
-symlink="${processed_case_input_dir}/${case_name}.nc"
+base_case_name_has_suffix="FALSE"
+if [ "${base_case_name_has_suffix}" = "TRUE" ]; then
+  symlink="${processed_case_input_dir}/${case_name_with_suffix}.nc"
+else
+  symlink="${processed_case_input_dir}/${case_name_without_suffix}.nc"
+fi
 ln -fs --relative "${target}" "${symlink}"
 #
 #-----------------------------------------------------------------------
@@ -410,7 +549,8 @@ ln -fs --relative "${target}" "${symlink}"
 #
 #-----------------------------------------------------------------------
 #
-output_subdir="output_${case_name}_${suite_name}"
+#output_subdir="output_${case_name}_${suite_name}"
+output_subdir="output_${case_name_without_suffix}_${suite_name}"
 output_dir="${bin_dir}/${output_subdir}"
 preexisting_dir_method="rename"
 #preexisting_dir_method="delete"
@@ -420,10 +560,21 @@ check_for_preexist_dir_file "${output_dir}" "${preexisting_dir_method}"
 #-----------------------------------------------------------------------
 #
 # Call the python script that runs the SCM case with the specified case
-# and physics suite.
+# and physics suite.  Note that we have to pass in the case name without
+# a suffix because this script will add the suffix if necessary.
 #
 #-----------------------------------------------------------------------
 #
-./run_gmtb_scm.py -c ${case_name} -s ${suite_name}
+./run_gmtb_scm.py -c ${case_name_without_suffix} -s ${suite_name}
+#./run_gmtb_scm.py -c ${case_name_with_suffix} -s ${suite_name}
+#                                                                        
+#----------------------------------------------------------------------- 
+#                                                                        
+# Restore the shell options saved at the beginning of this script/function.
+#                                                                        
+#----------------------------------------------------------------------- 
+#                                                                        
+{ restore_shell_opts; } > /dev/null 2>&1                               
+
 
 
