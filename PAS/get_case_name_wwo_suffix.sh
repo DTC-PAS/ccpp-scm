@@ -45,7 +45,6 @@ function get_case_name_wwo_suffix() {
 # functions/scripts so that the non-existence of VERBOSE doesn't make
 # them crash, even with "set -u".
   VERBOSE="TRUE"
-
 #
 #-----------------------------------------------------------------------
 #
@@ -63,32 +62,14 @@ function get_case_name_wwo_suffix() {
 #
 #-----------------------------------------------------------------------
 #
-#set -x
   local valid_args=( \
 "case_name" \
 "suffix" \
 "output_varname_case_name_without_suffix" \
 "output_varname_case_name_with_suffix" \
   )
-#  process_args valid_args "$@"
-
-#  efgh=$( process_args valid_args "$@" )
-#echo "efgh is:"
-#echo "$efgh"
-echo "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD"
-#exit
-#  eval $( process_args valid_args "$@" )
-  stuff=$( process_args valid_args "$@" )
-echo "stuff = <<
-$stuff
->>"
-#exit
-echo "RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR"
-set -x
-  eval $stuff
-echo "SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS"
-set +x
-#exit
+  local set_args_cmd=$( process_args valid_args "$@" )
+  eval ${set_args_cmd}
 #
 #-----------------------------------------------------------------------
 #
@@ -115,7 +96,7 @@ set +x
 #
 #-----------------------------------------------------------------------
 #
-#
+# Make sure the specified case name is not empty.
 #
 #-----------------------------------------------------------------------
 #
@@ -128,7 +109,10 @@ Please specify a non-empty case name and rerun."
 #
 #-----------------------------------------------------------------------
 #
-#
+# Set case_name_suffix as follows.  If case_name is shorter than suffix,
+# then set case_name_suffix to case_name.  Otherwise, set it to the last
+# len_suffix characters of case_name, where len_suffix is the number of
+# characters in suffix. 
 #
 #-----------------------------------------------------------------------
 #
@@ -139,7 +123,16 @@ Please specify a non-empty case name and rerun."
   if [ "${len_case_name}" -gt "${len_suffix}" ]; then
     case_name_suffix=${case_name: -${len_suffix}}
   fi
-
+#
+#-----------------------------------------------------------------------
+#
+# Consider the case in which the last len_suffix characters of case_name
+# are not equal to suffix, or the case in which case_name is shorter than
+# suffix.  In these cases, set the case name without suffix to case_name, 
+# and set the case name with suffix to case_name with suffix appended.
+#
+#-----------------------------------------------------------------------
+#
   if [ "${case_name_suffix}" != "${suffix}" ]; then
 
     print_info_msg "
@@ -152,18 +145,20 @@ the case name that includes the suffix.
 
     case_name_without_suffix="${case_name}"
     case_name_with_suffix="${case_name}${suffix}"
-
 #
 #-----------------------------------------------------------------------
 #
+# Consider the case in which the last len_suffix characters of case_name
+# are equal to suffix.  This has sub-cases.
 #
 #
 #-----------------------------------------------------------------------
 #
   else
 #
-# case_name contains the required suffix but is not exactly equal to the
-# suffix.
+# case_name ends with suffix but is not exactly equal to suffix.  In this
+# case, set the case name with suffix to case_name, and get the case namne
+# without suffix by removing the suffix from the end of case_name.
 #
     if [ "${len_case_name}" -ne "${len_suffix}" ]; then
 
@@ -178,7 +173,13 @@ counterpart of the case name without the suffix.
       len_case_name_without_suffix=$(( ${len_case_name} - ${len_suffix} ))
       case_name_without_suffix="${case_name:0:${len_case_name_without_suffix}}"
       case_name_with_suffix="${case_name}"
-
+#
+# case_name ends with suffix and contains no other (preceeding) characters, 
+# i.e. it is exactly equal to suffix.  In this case, print out an error 
+# message and exit because if we were to strip out the suffix from case_name, 
+# the resulting name without suffix would be a null string, and that 
+# wouldn't work.
+#
     else
 
       print_err_msg_exit "\
