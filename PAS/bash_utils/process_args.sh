@@ -196,8 +196,10 @@ where the arguments are defined as follows:
         arg_already_specified \
         arg_val_pair \
         arg_name \
-        arg_value is_array \
-        err_msg cmd_line
+        arg_value \
+        is_array \
+        err_msg \
+        cmd_line
 #
 #-----------------------------------------------------------------------
 #
@@ -345,8 +347,6 @@ but the element with index i=${i} is empty:
   for (( i=0; i<${num_valid_args}; i++ )); do
 
     valid_arg_name="${valid_arg_names[$i]}"
-#    eval ${valid_arg_name}=""
-#    eval ${local_or_null} ${valid_arg_name}=""
 
     if [ "$i" -eq "0" ]; then
       set_all_args_cmd="\
@@ -417,14 +417,10 @@ pair (arg_val_pair) is not valid:
         if [ "${arg_already_specified[$i]}" = "false" ]; then
           arg_already_specified[$i]="true"
           if [ "${is_array}" = "true" ]; then
-#            eval ${arg_name}=${arg_value}
-#            eval ${local_or_null} ${arg_name}=${arg_value}
             set_all_args_cmd="\
 ${set_all_args_cmd} ;
 ${local_or_null} ${arg_name}=${arg_value}"
           else
-#            eval ${arg_name}=\"${arg_value}\"
-#            eval ${local_or_null} ${arg_name}=\"${arg_value}\"
             set_all_args_cmd="\
 ${set_all_args_cmd} ;
 ${local_or_null} ${arg_name}=\"${arg_value}\""
