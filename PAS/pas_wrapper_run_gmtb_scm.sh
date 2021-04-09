@@ -56,8 +56,6 @@ source ${scrfunc_dir}/get_case_name_wwo_suffix.sh
 #
 #-----------------------------------------------------------------------
 #
-#set -x
-echo "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG"
 valid_args=( \
   "base_case_name" \
   "base_suite_name" \
@@ -66,22 +64,10 @@ valid_args=( \
   "resol_km" \
   "dt_sec" \
   )
-echo "HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH"
-#process_args valid_args "$@"
-ijkl=$( process_args valid_args "$@" )
-echo "ijkl is:"
-echo "$ijkl"
-#echo "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
-##echo "base_case_name = \"${base_case_name}\""
-eval $ijkl
-#echo "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"
-#echo "base_case_name = \"${base_case_name}\""
-#exit
-
-#echo "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII"
-#eval $( process_args valid_args "$@" )
-#echo "JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ"
-
+set_args_cmd=$( process_args valid_args "$@" )
+echo "set_args_cmd is:"
+echo "$set_args_cmd"
+eval ${set_args_cmd}
 #
 #-----------------------------------------------------------------------
 #
@@ -384,10 +370,6 @@ done
 #
 #-----------------------------------------------------------------------
 #
-#echo "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM"
-#echo "case_name = \"${case_name}\""
-#echo "case_name_without_suffix = \"${case_name_without_suffix}\""
-#exit
 SCM_driver_suffix="_SCM_driver"
 
 get_case_name_wwo_suffix \
@@ -395,33 +377,6 @@ get_case_name_wwo_suffix \
   suffix="${SCM_driver_suffix}" \
   output_varname_case_name_without_suffix="base_case_name_without_suffix" \
   output_varname_case_name_with_suffix="base_case_name_with_suffix"
-
-# This is just to see if array input arguments still work.
-#get_case_name_wwo_suffix \
-#  case_name="${base_case_name}" \
-#  suffix="( \"_aa\" \"bb\" \"cc\" )" \
-#  output_varname_case_name_without_suffix="base_case_name_without_suffix" \
-#  output_varname_case_name_with_suffix="base_case_name_with_suffix"
-
-echo "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN"
-#echo "case_name = \"${case_name}\""
-#echo "suffix = \"${suffix}\""
-#echo "output_varname_case_name_without_suffix = \"${output_varname_case_name_without_suffix}\""
-#echo "valid_arg_names_0th = \"${valid_arg_names_0th}\""
-#echo "valid_arg_names_str = \"${valid_arg_names_str}\""
-#echo "array_name_valid_arg_names = \"${array_name_valid_arg_names}\""
-#echo "_len_suffix = \"${_len_suffix}\""
-#echo "case_name_without_suffix = \"${case_name_without_suffix}\""
-echo "base_case_name_without_suffix = \"${base_case_name_without_suffix}\""
-echo "base_case_name_with_suffix = \"${base_case_name_with_suffix}\""
-#exit
-
-#local _len_suffix \
-#      _len_case_name \
-#      _len_case_name_without_suffix \
-#      _case_name_suffix \
-#      _case_name_without_suffix \
-#      _case_name_with_suffix
 
 base_case_name_has_suffix="FALSE"
 if [ "${base_case_name}" = "${base_case_name_with_suffix}" ]; then
@@ -437,34 +392,34 @@ fi
 #
 #-----------------------------------------------------------------------
 #
-#case_name="${base_case_name}_dx_${resol_km}km_dt_${dt_sec}sec_${conv_suffix}"
 case_name_without_suffix="${base_case_name_without_suffix}_dx_${resol_km}km_dt_${dt_sec}sec_${conv_suffix}"
 case_name_with_suffix="${case_name_without_suffix}${SCM_driver_suffix}"
 #
 #-----------------------------------------------------------------------
 #
 # Generate the case namelist file by replacing placeholders in a template 
-# namelist file with actual values.  The name of this file must constructed
-# using the same case name that is passed to the run_gmtb_scm.py script
-# below.  Note, however, that the name of the template namelist file is
-# constructed using the case basename passed to this script.
+# namelist file with actual values.  Template namelist files exist only 
+# for the base cases, so the name of the template file must be constructed
+# using base_case_name.  
+#
+# Note that the name of the actual case namelist file must constructed 
+# using the case name without the "_SCM_driver" suffix whether or not the
+# specified base_case contains that suffix.  That is because the python 
+# script run_gmtb_scm.py called below to run the SCM takes in the case 
+# name without a suffix, and it does not append the suffix when constucting 
+# the name of the case namelist file to read in.  [However, it does append 
+# the suffix to the name of the NetCDF file containing processed case 
+# data if input_type in the namelist file is set to 1 (meaning that the
+# data is in the DEPHY international SCM format, which in turn means that 
+# the case name must end in the "_SCM_driver" suffix), so the name of the 
+# symlink created below that points to the processed case data file must 
+# include the suffix; see below). 
 #
 #-----------------------------------------------------------------------
 #
-echo "OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO"
-#echo "case_name = \"${case_name}\""
-echo "case_name_without_suffix = \"${case_name_without_suffix}\""
-echo "case_name_with_suffix = \"${case_name_with_suffix}\""
-#exit
-
 case_nml_dir="${scm_basedir}/scm/etc/case_config"
 
 tmpl_case_nml_fn="tmpl.${base_case_name}.nml"
-#if [ "${base_case_name_has_suffix}" = "TRUE" ]; then
-#  case_nml_fn="${case_name_with_suffix}.nml"
-#else
-#  case_nml_fn="${case_name_without_suffix}.nml"
-#fi
 case_nml_fn="${case_name_without_suffix}.nml"
 
 tmpl_case_nml_fp="${case_nml_dir}/${tmpl_case_nml_fn}"
@@ -493,10 +448,6 @@ cp "${tmpl_case_nml_fp}" "${case_nml_fp}"
 #
 # Set the case name in the case namelist file.
 #
-echo "PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP"
-echo "case_name_without_suffix = \"${case_name_without_suffix}\""
-echo "case_name_with_suffix = \"${case_name_with_suffix}\""
-#exit
 regex_search="(^\s*case_name\s*=\s*)(<.*>)(,)\s*$"
 regex_replace="\1""\'${case_name_without_suffix}\'""\3"
 sed -i -r -e "s|${regex_search}|${regex_replace}|" "${case_nml_fp}"
@@ -518,13 +469,26 @@ sed -i -r -e "s|${regex_search}|${regex_replace}|" "${case_nml_fp}"
 #
 #-----------------------------------------------------------------------
 #
-# Create a symlink for the processed case input data.
+# Create a symlink that points to the processed case input data file (in
+# NetCDF format) that the case should use.
+#
+# The existing processed case data files are for the base cases.  Thus,
+# the name of the target of the link must be constructed using base_case_name.
+# The name of the symlink must be constructed using the case name (either
+# with or without the "_SCM_driver" suffix depending on whther or not 
+# base_case_name contains the suffix) because the python script run_gmtb_scm.py 
+# called below to run the SCM takes as an argument the case name without 
+# a suffix, not base_case_name, and it then constructs the name of the
+# processed case data file such that the latter ends with the suffix if
+# base_case_name ends with the suffix (or, equivalently, if the variable 
+# input_type in the case namelist file is set to 1, meaning that the data 
+# is in the DEPHY international SCM format, which in turn means that the 
+# case name should end in the "_SCM_driver" suffix) and not otherwise.
 #
 #-----------------------------------------------------------------------
 #
 processed_case_input_dir="${scm_basedir}/scm/data/processed_case_input"
 target="${processed_case_input_dir}/${base_case_name}.nc"
-base_case_name_has_suffix="FALSE"
 if [ "${base_case_name_has_suffix}" = "TRUE" ]; then
   symlink="${processed_case_input_dir}/${case_name_with_suffix}.nc"
 else
@@ -549,12 +513,9 @@ ln -fs --relative "${target}" "${symlink}"
 #
 #-----------------------------------------------------------------------
 #
-#output_subdir="output_${case_name}_${suite_name}"
 output_subdir="output_${case_name_without_suffix}_${suite_name}"
 output_dir="${bin_dir}/${output_subdir}"
-preexisting_dir_method="rename"
-#preexisting_dir_method="delete"
-#preexisting_dir_method="quit"
+preexisting_dir_method="rename"  # Other possibilites are "delete" and "quit".
 check_for_preexist_dir_file "${output_dir}" "${preexisting_dir_method}"
 #
 #-----------------------------------------------------------------------
@@ -566,7 +527,6 @@ check_for_preexist_dir_file "${output_dir}" "${preexisting_dir_method}"
 #-----------------------------------------------------------------------
 #
 ./run_gmtb_scm.py -c ${case_name_without_suffix} -s ${suite_name}
-#./run_gmtb_scm.py -c ${case_name_with_suffix} -s ${suite_name}
 #                                                                        
 #----------------------------------------------------------------------- 
 #                                                                        
@@ -575,6 +535,4 @@ check_for_preexist_dir_file "${output_dir}" "${preexisting_dir_method}"
 #----------------------------------------------------------------------- 
 #                                                                        
 { restore_shell_opts; } > /dev/null 2>&1                               
-
-
 
