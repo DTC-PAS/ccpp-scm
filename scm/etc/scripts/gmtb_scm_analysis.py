@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
+prnt_prfx = "=============>>>>>>>>>>>>>>>>> "
+
+#print("%sImporting sys..." % prnt_prfx)
 import sys
 PYTHON2 = sys.version_info[0] < 3
 if PYTHON2:
@@ -28,7 +31,8 @@ g = 9.81
 missing_value = -999
 missing_soil_levels = 4
 
-plot_ext = '.pdf' #.pdf, .eps, .ps, .png (.png is fastest, but raster)
+#plot_ext = '.pdf' #.pdf, .eps, .ps, .png (.png is fastest, but raster)
+plot_ext = '.png' #.pdf, .eps, .ps, .png (.png is fastest, but raster)
 
 reload(gspr)
 reload(gsro)
@@ -90,6 +94,8 @@ if(plot_ind_datasets):
     num_total_plots = len(gmtb_scm_datasets)*num_base_plots
 if(len(gmtb_scm_datasets) > 1):
     num_total_plots += num_base_plots - len(time_slices)*len(contours['vars'])
+
+print("%s num_total_plots = %s" % (prnt_prfx, num_total_plots))
 
 num_plots_completed = 0
 
@@ -312,6 +318,10 @@ time_slice_indices_lwrad = []
 time_slice_labels = []
 
 for i in range(len(gmtb_scm_datasets)):
+    print("\n")
+    print("%si = %d" % (prnt_prfx, i))
+    print("gmtb_scm_datasets[i]:")
+    print(gmtb_scm_datasets[i])
     nc_fid = Dataset(gmtb_scm_datasets[i], 'r')
     nc_fid.set_auto_mask(False)
 
@@ -324,6 +334,8 @@ for i in range(len(gmtb_scm_datasets)):
     minute.append(nc_fid.variables['init_minute'][:])
 
     time_inst.append(nc_fid.variables['time_inst'][:])
+    print("%stime_inst:" % (prnt_prfx))
+    print(time_inst)
     time_diag.append(nc_fid.variables['time_diag'][:])
     time_swrad.append(nc_fid.variables['time_swrad'][:])
     time_lwrad.append(nc_fid.variables['time_lwrad'][:])
@@ -750,6 +762,9 @@ for i in range(len(gmtb_scm_datasets)):
     initial_date = datetime.datetime(year[i], month[i], day[i], hour[i], minute[i], 0, 0)
     
     #convert times to datetime objects starting from initial date
+    print("%sinitial_date = %s" % (prnt_prfx, initial_date))
+#    print("%sinitial_date:" % (prnt_prfx))
+#    print(initial_date)
     date_inst.append(np.array([initial_date + datetime.timedelta(seconds=int(s)) for s in time_inst[-1]]))
     date_diag.append(np.array([initial_date + datetime.timedelta(seconds=int(s)) for s in time_diag[-1]]))
     date_swrad.append(np.array([initial_date + datetime.timedelta(seconds=int(s)) for s in time_swrad[-1]]))
@@ -779,6 +794,9 @@ for i in range(len(gmtb_scm_datasets)):
     #
     # rad_net_srf.append((sw_dn_sfc_tot[-1] - sw_up_sfc_tot[-1]) + (lw_dn_sfc_tot[-1] - lw_up_sfc_tot[-1]))
 
+
+print("\n%sOut of i-loop.\n" % prnt_prfx)
+
 #only keep unique elements in time group lists
 inst_time_group = list(set(inst_time_group))
 diag_time_group = list(set(diag_time_group))
@@ -792,10 +810,18 @@ time_h_lwrad = [x/3600.0 for x in time_lwrad]
 
 #find the indices corresponding to the start and end times of the time slices defined in the config file
 for time_slice in time_slices:
+    print("\n")
+    print("%stime_slice = %s" % (prnt_prfx, time_slice))
+    print(time_slice)
+    print("%stime_slices:" % (prnt_prfx))
+    print(time_slices)
     time_slice_labels.append(time_slice)
     start_date = datetime.datetime(time_slices[time_slice]['start'][0], time_slices[time_slice]['start'][1],time_slices[time_slice]['start'][2], time_slices[time_slice]['start'][3],time_slices[time_slice]['start'][4])
     end_date = datetime.datetime(time_slices[time_slice]['end'][0], time_slices[time_slice]['end'][1],time_slices[time_slice]['end'][2], time_slices[time_slice]['end'][3],time_slices[time_slice]['end'][4])
     
+    print("%sstart_date = %s" % (prnt_prfx, start_date))
+    print("%send_date = %s" % (prnt_prfx, end_date))
+    print("%sdate_inst[0] = %s" % (prnt_prfx, date_inst[0]))
     valid_inst_indices = np.where((date_inst[0] >= start_date) & (date_inst[0] <= end_date))
     start_date_index_inst = valid_inst_indices[0][0]
     end_date_index_inst = valid_inst_indices[0][-1]
@@ -829,6 +855,8 @@ for time_slice in time_slices:
     time_slice_indices_inst.append([start_date_index_inst, end_date_index_inst])
     time_slice_indices_diag.append([start_date_index_diag, end_date_index_diag])
 
+print("\n%sOut of time-slice loop.\n" % prnt_prfx)
+
 #fill the obs_dict by calling the appropriate observation file read routine
 if(obs_compare and obs_file):
     if(case_name.strip() == 'twpice'):
@@ -841,12 +869,19 @@ if(obs_compare and obs_file):
         obs_dict = gsro.read_gabls3_obs(obs_file, time_slices, date_inst)
     elif('UFS' in case_name.strip()):
         obs_dict = gsro.read_UFS_comp_data(obs_file, time_slices, date_inst)
+    elif('arm_sgp_summer_1997_A' in case_name.strip()):
+        obs_dict = gsro.read_arm_sgp_summer_1997_obs(obs_file, time_slices, date_inst)
+    elif('twpice_' in case_name.strip()):
+        obs_dict = gsro.read_twpice_obs(obs_file, time_slices, date_inst)
 
+print("\n%sMaking plot directories...\n" % prnt_prfx)
 try:
     os.makedirs(plot_dir)
 except OSError:
     if not os.path.isdir(plot_dir):
         raise
+
+print("\n%sMean profiles...\n" % prnt_prfx)
 
 if(profiles_mean['vert_axis'] in locals()):
     if(obs_compare):
@@ -857,6 +892,8 @@ if(profiles_mean['vert_axis'] in locals()):
     y_min_option_pm = profiles_mean['y_min_option']
     y_max_option_pm = profiles_mean['y_max_option']
 
+print("\n%sContour plots...\n" % prnt_prfx)
+
 if(contours['vert_axis'] in locals()):
     vert_axis_label_c = contours['vert_axis_label']
     y_inverted_val_c = contours['y_inverted']
@@ -865,9 +902,13 @@ if(contours['vert_axis'] in locals()):
     y_max_option_c = contours['y_max_option']
 
 
+print("\n%sPlots for individual datasets...\n" % prnt_prfx)
+print("\n%splot_ind_datasets = %s\n" % (prnt_prfx, plot_ind_datasets))
+
 #make plots for each dataset individually (colors should stay the same for each dataset [using color_index keyword])
 if(plot_ind_datasets):
     for i in range(len(gmtb_scm_datasets)):
+        print("%s  i = %d" % (prnt_prfx, i))
         #loop through the time slices
         for j in range(len(time_slice_labels)):
             ind_dir = plot_dir + gmtb_scm_datasets_labels[i] + '/' + time_slice_labels[j]
@@ -1298,11 +1339,14 @@ if(plot_ind_datasets):
             else:
                 print('The variable ' + contours['vert_axis'] + ' found in ' + args.config[0] + ' in the contours section is invalid.')
 
+print("%sGenerating comparison plots...\n" % (prnt_prfx))
 
 #make comparison plots
 if(len(gmtb_scm_datasets) > 1):
     #loop through the time slices
     for j in range(len(time_slice_labels)):
+        print("%sj = %d  ;  time_slice_labels[j] = %s" % (prnt_prfx, j, time_slice_labels[j]))
+        print("%s  plot_dir = %s" % (prnt_prfx, plot_dir))
         comp_dir = plot_dir + 'comp/' + time_slice_labels[j]
 
         #make the directory for the current dataset
@@ -1332,7 +1376,9 @@ if(len(gmtb_scm_datasets) > 1):
             y_lim_val = [y_min_val, y_max_val]
 
             #plot mean profiles
+            print("\n%s  Plotting mean profiles...\n" % (prnt_prfx))
             for k in range(len(profiles_mean['vars'])):
+                print("%s    k = %d  ;  profiles_mean['vars'][k] = %s" % (prnt_prfx, k, profiles_mean['vars'][k]))
                 #get the python variable associated with the vars listed in the config file
                 if(profiles_mean['vars'][k] in locals()):
                     data = np.array(locals()[profiles_mean['vars'][k]])
@@ -1384,7 +1430,9 @@ if(len(gmtb_scm_datasets) > 1):
                 num_plots_completed += 1
                 print_progress(num_plots_completed, num_total_plots)
 
+            print("\n%s  Plotting multi mean profiles...\n" % (prnt_prfx))
             for multiplot in profiles_mean_multi:
+                print("%s    multiplot = %s" % (prnt_prfx, multiplot))
                 #multiplot_vars = profiles_mean_multi[multiplot]['vars']
 
                 #check if all the vars exist
