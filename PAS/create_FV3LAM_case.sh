@@ -63,7 +63,8 @@ valid_args=( \
   "lon" \
   "lat" \
   )
-process_args valid_args "$@"
+set_args_cmd=$( process_args valid_args "$@" )
+eval ${set_args_cmd}
 #
 #-----------------------------------------------------------------------
 #
@@ -81,11 +82,28 @@ print_input_args valid_args
 #
 #-----------------------------------------------------------------------
 #
+SCM_driver_suffix="_SCM_driver"
+
 get_case_name_wwo_suffix \
   case_name="${case_name}" \
-  suffix="_SCM_driver" \
+  suffix="${SCM_driver_suffix}" \
   output_varname_case_name_without_suffix="case_name_without_suffix" \
-  output_varname_case_name_with_suffix="case_name_with_suffix"
+  output_varname_case_name_with_suffix="case_name_with_suffix" 
+
+case_name_has_suffix="FALSE"
+if [ "${case_name}" = "${case_name_with_suffix}" ]; then
+  case_name_has_suffix="TRUE"
+fi
+
+if [ "${case_name_has_suffix}" = "FALSE" ]; then
+  print_err_msg_exit "\
+The specified case name (case_name) is missing the \"${SCM_driver_suffix}\" suffix.
+The python script (UFS_IC_generator.py) called by this script to generate 
+an SCM case from an FV3LAM forecast will use the the DEPHY international 
+SCM format to generate the case data, and that requires the case name to
+end in the \"${SCM_driver_suffix}\" suffix:
+  case_name = \"${case_name}\""
+fi
 #
 #-----------------------------------------------------------------------
 #
@@ -133,6 +151,4 @@ cd "${scripts_dir}"
 #----------------------------------------------------------------------- 
 #                                                                        
 { restore_shell_opts; } > /dev/null 2>&1                               
-
-
 
