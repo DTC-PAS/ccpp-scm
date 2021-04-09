@@ -65,8 +65,6 @@ valid_args=( \
   "dt_sec" \
   )
 set_args_cmd=$( process_args valid_args "$@" )
-echo "set_args_cmd is:"
-echo "$set_args_cmd"
 eval ${set_args_cmd}
 #
 #-----------------------------------------------------------------------
