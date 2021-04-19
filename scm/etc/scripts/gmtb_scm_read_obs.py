@@ -6,6 +6,7 @@ import numpy as np
 import sys
 import math
 import forcing_file_common as ffc
+from pprint import pprint
 
 def read_twpice_obs(obs_file, time_slices, date):
   obs_time_slice_indices = []
@@ -108,10 +109,15 @@ def read_arm_sgp_summer_1997_obs(obs_file, time_slices, date):
   for i in range(obs_hour.size):
       obs_date.append(datetime.datetime(obs_year[i], obs_month[i], obs_day[i], obs_hour[i], 0, 0, 0))
   obs_date = np.array(obs_date)
+  print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
+  print("obs_date is:")
+  pprint(obs_date)
 
   for time_slice in time_slices:
     start_date = datetime.datetime(time_slices[time_slice]['start'][0], time_slices[time_slice]['start'][1],time_slices[time_slice]['start'][2], time_slices[time_slice]['start'][3], time_slices[time_slice]['start'][4])
     end_date = datetime.datetime(time_slices[time_slice]['end'][0], time_slices[time_slice]['end'][1],time_slices[time_slice]['end'][2], time_slices[time_slice]['end'][3], time_slices[time_slice]['end'][4])
+    print("start_date is: %s" % (start_date))
+    print("end_date is: %s" % (end_date))
     start_date_index = np.where(obs_date == start_date)[0][0]
     end_date_index = np.where(obs_date == end_date)[0][0]
     obs_time_slice_indices.append([start_date_index, end_date_index])

@@ -24,6 +24,7 @@ import gmtb_scm_plotting_routines as gspr
 import pandas as pd
 import bisect
 import gmtb_scm_read_obs as gsro
+from pprint import pprint
 
 Rd = 287.0
 Rv = 461.0
@@ -56,7 +57,24 @@ args = parser.parse_args()
 #read in the configuration file specified on the command line (check against the configspec.ini file for validation)
 config = ConfigObj(args.config[0],configspec="configspec.ini")
 validator = Validator()
-results = config.validate(validator)
+#results = config.validate(validator)
+results = config.validate(validator, preserve_errors=True)
+print("XXXXXXXXXXXXXXXXXXXXXXXXXXX")
+pprint(results)
+
+#if results != True:
+#    for entry in flatten_errors(config, results):
+#        # each entry is a tuple
+#        section_list, key, error = entry
+#        if key is not None:
+#           section_list.append(key)
+#        else:
+#            section_list.append('[missing section]')
+#        section_string = ', '.join(section_list)
+#        if error == False:
+#            error = 'Missing value or section.'
+#        print("%s = %s" % (section_string, error))
+#quit()
 
 #standardized output for config file validation errors (quit if error)
 if results != True:
@@ -70,6 +88,7 @@ if results != True:
 
 #get the config file variables
 gmtb_scm_datasets = config['gmtb_scm_datasets']
+print("%s type(gmtb_scm_datasets) = %s" % (prnt_prfx, type(gmtb_scm_datasets)))
 gmtb_scm_datasets_labels = config['gmtb_scm_datasets_labels']
 obs_file = config['obs_file']
 obs_compare = config['obs_compare']
@@ -88,14 +107,28 @@ profiles_mean_multi = plots['profiles_mean_multi']
 time_series_multi = plots['time_series_multi']
 
 #keep track of progress
-num_base_plots = len(time_slices)*(len(profiles_mean['vars']) + len(profiles_mean_multi) + len(time_series['vars']) + len(time_series_multi) + len(contours['vars']))
+print("\n")
+print("%s len(profiles_mean['vars']) = %d" % (prnt_prfx, len(profiles_mean['vars'])))
+print("%s len(profiles_mean_multi) = %d" % (prnt_prfx, len(profiles_mean_multi)))
+print("%s len(time_series['vars']) = %d" % (prnt_prfx, len(time_series['vars'])))
+print("%s len(time_series_multi) = %d" % (prnt_prfx, len(time_series_multi)))
+print("%s len(contours['vars']) = %d" % (prnt_prfx, len(contours['vars'])))
+num_base_plots_per_time_slice = len(profiles_mean['vars']) + len(profiles_mean_multi) + len(time_series['vars']) + len(time_series_multi) + len(contours['vars'])
+print("%s num_base_plots_per_time_slice = %d" % (prnt_prfx, num_base_plots_per_time_slice))
+#num_base_plots = len(time_slices)*(len(profiles_mean['vars']) + len(profiles_mean_multi) + len(time_series['vars']) + len(time_series_multi) + len(contours['vars']))
+num_base_plots = len(time_slices)*num_base_plots_per_time_slice
+print("\n")
+print("%s len(time_slices) = %d" % (prnt_prfx, len(time_slices)))
+print("%s num_base_plots = %d" % (prnt_prfx, num_base_plots))
 num_total_plots = 0
 if(plot_ind_datasets):
     num_total_plots = len(gmtb_scm_datasets)*num_base_plots
 if(len(gmtb_scm_datasets) > 1):
     num_total_plots += num_base_plots - len(time_slices)*len(contours['vars'])
 
-print("%s num_total_plots = %s" % (prnt_prfx, num_total_plots))
+print("\n")
+print("%s len(gmtb_scm_datasets) = %d" % (prnt_prfx, len(gmtb_scm_datasets)))
+print("%s num_total_plots = %d" % (prnt_prfx, num_total_plots))
 
 num_plots_completed = 0
 
@@ -317,9 +350,12 @@ time_slice_indices_swrad = []
 time_slice_indices_lwrad = []
 time_slice_labels = []
 
+print("\n")
+print("%sLooping over gmtb_scm_datasets:\n" % (prnt_prfx))
+
 for i in range(len(gmtb_scm_datasets)):
     print("\n")
-    print("%si = %d" % (prnt_prfx, i))
+    print("%sAAAAAAAAAAAAAAAAAAA i = %d" % (prnt_prfx, i))
     print("gmtb_scm_datasets[i]:")
     print(gmtb_scm_datasets[i])
     nc_fid = Dataset(gmtb_scm_datasets[i], 'r')
@@ -333,9 +369,27 @@ for i in range(len(gmtb_scm_datasets)):
     hour.append(nc_fid.variables['init_hour'][:])
     minute.append(nc_fid.variables['init_minute'][:])
 
+# The arrays time_inst, time_diag, time_swrad, and time_lwrad are arrays
+# that are calculated in the SCM code from parameters read in from the
+# physics and case namelist files.  At first glance, it seems that (these 
+# statements need to be checked more carefully):
+#
+# 1) time_inst is determined by the runtime and dt specified in the case
+#    namelist file.
+# 2) time_diag is detrmined by dt in the case namelist file and fhzero
+#    in the physics namelist file.
+# 3) time_swrad is determined by runtime in the case namelist and fhswr
+#    in the physics namelist file.
+# 4) time_lwrad is determined by runtime in the case namelist and fhlwr
+#    in the physics namelist file.
+#
+# Most arrays in the output file of the SCM have a time dimension of either
+# time_inst_dim or time_diag_dim, which are the dimensions of the arrays
+# time_inst and time_diag, respectively.
+
     time_inst.append(nc_fid.variables['time_inst'][:])
-    print("%stime_inst:" % (prnt_prfx))
-    print(time_inst)
+#    print("%stime_inst:" % (prnt_prfx))
+#    print(time_inst)
     time_diag.append(nc_fid.variables['time_diag'][:])
     time_swrad.append(nc_fid.variables['time_swrad'][:])
     time_lwrad.append(nc_fid.variables['time_lwrad'][:])
@@ -363,6 +417,13 @@ for i in range(len(gmtb_scm_datasets)):
     
     qv.append(nc_fid.variables['qv'][:])
     inst_time_group.append('qv')
+#    print("GGGGGGGGGG type(qv) is:")
+#    print(type(qv))
+#    print("GGGGGGGGGG len(qv) is:")
+#    print(len(qv))
+#    print("HHHHHHHHHH qv is:")
+#    print(qv[0])
+#    kkkkkkkkkkkkkkkkkkkkk
     
     T.append(nc_fid.variables['T'][:])
     inst_time_group.append('T')
@@ -765,6 +826,11 @@ for i in range(len(gmtb_scm_datasets)):
     print("%sinitial_date = %s" % (prnt_prfx, initial_date))
 #    print("%sinitial_date:" % (prnt_prfx))
 #    print(initial_date)
+#    print("%stime_inst[-1] = %f" % (prnt_prfx, time_inst[-1]))
+#    print("%s time_inst[-1] = " % (prnt_prfx))
+#    print(time_inst[-1])
+#    print(type(time_inst))
+#    pppppppppp
     date_inst.append(np.array([initial_date + datetime.timedelta(seconds=int(s)) for s in time_inst[-1]]))
     date_diag.append(np.array([initial_date + datetime.timedelta(seconds=int(s)) for s in time_diag[-1]]))
     date_swrad.append(np.array([initial_date + datetime.timedelta(seconds=int(s)) for s in time_swrad[-1]]))
@@ -794,14 +860,50 @@ for i in range(len(gmtb_scm_datasets)):
     #
     # rad_net_srf.append((sw_dn_sfc_tot[-1] - sw_up_sfc_tot[-1]) + (lw_dn_sfc_tot[-1] - lw_up_sfc_tot[-1]))
 
+print("\n%sOut of loop over gmtb_scm_datasets...\n" % prnt_prfx)
+#qqqqqqqqqqqqqqqq
 
-print("\n%sOut of i-loop.\n" % prnt_prfx)
+#print("\n")
+#print("%sinst_time_group is:\n" % prnt_prfx)
+#pprint(inst_time_group)
+#
+#print("\n")
+#print("%sdiag_time_group is:\n" % prnt_prfx)
+#pprint(diag_time_group)
+#
+#print("\n")
+#print("%sswrad_time_group is:\n" % prnt_prfx)
+#pprint(swrad_time_group)
+#
+#print("\n")
+#print("%slwrad_time_group is:\n" % prnt_prfx)
+#pprint(lwrad_time_group)
+#
+#print("\n")
+#print("%sdate_inst is:\n" % prnt_prfx)
+#pprint(date_inst)
+
+print("\n")
+print("%sdate_diag is:\n" % prnt_prfx)
+pprint(date_diag)
+#
+#print("\n")
+#print("%sdate_swrad is:\n" % prnt_prfx)
+#pprint(date_swrad)
+#
+#print("\n")
+#print("%sdate_lwrad is:\n" % prnt_prfx)
+#pprint(date_lwrad)
 
 #only keep unique elements in time group lists
 inst_time_group = list(set(inst_time_group))
 diag_time_group = list(set(diag_time_group))
 swrad_time_group = list(set(swrad_time_group))
 lwrad_time_group = list(set(lwrad_time_group))
+
+#print("\n")
+#print("%slwrad_time_group is:\n" % prnt_prfx)
+#pprint(lwrad_time_group)
 
 time_h_inst = [x/3600.0 for x in time_inst]
 time_h_diag = [x/3600.0 for x in time_diag]
@@ -821,7 +923,8 @@ for time_slice in time_slices:
     
     print("%sstart_date = %s" % (prnt_prfx, start_date))
     print("%send_date = %s" % (prnt_prfx, end_date))
-    print("%sdate_inst[0] = %s" % (prnt_prfx, date_inst[0]))
+#    print("%sdate_inst[0] = %s" % (prnt_prfx, date_inst[0]))
+#    jjjjjjjjjjjjjjjjjjjjjjj
     valid_inst_indices = np.where((date_inst[0] >= start_date) & (date_inst[0] <= end_date))
     start_date_index_inst = valid_inst_indices[0][0]
     end_date_index_inst = valid_inst_indices[0][-1]
@@ -857,6 +960,19 @@ for time_slice in time_slices:
 
 print("\n%sOut of time-slice loop.\n" % prnt_prfx)
 
+print("\n")
+print("%stime_slice_indices_inst is:\n" % prnt_prfx)
+pprint(time_slice_indices_inst)
+
+print("\n")
+print("%stime_slice_indices_diag is:\n" % prnt_prfx)
+pprint(time_slice_indices_diag)
+
+#aaaaaaaaaaaaaaaaaaaaaaa
+
+print("obs_compare = %s" % (obs_compare))
+print("obs_file = %s" % (obs_file))
+#bbbbbbbbbbbbbbbbbbbb
 #fill the obs_dict by calling the appropriate observation file read routine
 if(obs_compare and obs_file):
     if(case_name.strip() == 'twpice'):
@@ -873,6 +989,8 @@ if(obs_compare and obs_file):
         obs_dict = gsro.read_arm_sgp_summer_1997_obs(obs_file, time_slices, date_inst)
     elif('twpice_' in case_name.strip()):
         obs_dict = gsro.read_twpice_obs(obs_file, time_slices, date_inst)
+    elif('severe_wx_' in case_name.strip()):
+        obs_dict = gsro.read_UFS_comp_data(obs_file, time_slices, date_inst)
 
 print("\n%sMaking plot directories...\n" % prnt_prfx)
 try:
@@ -908,7 +1026,7 @@ print("\n%splot_ind_datasets = %s\n" % (prnt_prfx, plot_ind_datasets))
 #make plots for each dataset individually (colors should stay the same for each dataset [using color_index keyword])
 if(plot_ind_datasets):
     for i in range(len(gmtb_scm_datasets)):
-        print("%s  i = %d" % (prnt_prfx, i))
+        print("%s  i = %d;  gmtb_scm_datasets_labels[i] = %s" % (prnt_prfx, i, gmtb_scm_datasets_labels[i]))
         #loop through the time slices
         for j in range(len(time_slice_labels)):
             ind_dir = plot_dir + gmtb_scm_datasets_labels[i] + '/' + time_slice_labels[j]
@@ -945,6 +1063,7 @@ if(plot_ind_datasets):
 
                 #plot mean profiles
                 for k in range(len(profiles_mean['vars'])):
+                    print("%s    k = %d;  profiles_mean['vars'][k] = %s" % (prnt_prfx, k, profiles_mean['vars'][k]))
                     #get the python variable associated with the vars listed in the config file
                     if(profiles_mean['vars'][k] in locals()):
                         data = np.array(locals()[profiles_mean['vars'][k]][i])
@@ -1008,9 +1127,18 @@ if(plot_ind_datasets):
                             
                         data_list = []
                         for l in range(len(profiles_mean_multi[multiplot]['vars'])):
+                            print("@@@@@@@@@@@@ l = %d;  profiles_mean_multi[multiplot]['vars'][l] = %s" % (l, profiles_mean_multi[multiplot]['vars'][l]))
                             data = np.array(locals()[profiles_mean_multi[multiplot]['vars'][l]])
                             if (profiles_mean_multi[multiplot]['vars'][l] in inst_time_group):
                                 #print("{} in time group inst".format(profiles_mean_multi[multiplot]['vars'][l]))
+                                print("***** time_slice_indices_inst[j][0] = %s" % (time_slice_indices_inst[j][0]))
+                                print("***** time_slice_indices_inst[j][1] = %s" % (time_slice_indices_inst[j][1]))
+                                print("***** type(data) = %s" % (type(data)))
+                                print("***** data.ndim = %d" % (data.ndim))
+                                #print("***** data.shape = %d" % (data.shape))
+                                print("***** data.shape is:")
+                                print(data.shape)
+                                #nnnnnnnnnnnnnnnnnn
                                 data_time_slice = data[i,time_slice_indices_inst[j][0]:time_slice_indices_inst[j][1],:,:]
                             elif (profiles_mean_multi[multiplot]['vars'][l] in diag_time_group):
                                 #print("{} in time group diag".format(profiles_mean_multi[multiplot]['vars'][l]))
@@ -1348,6 +1476,8 @@ if(len(gmtb_scm_datasets) > 1):
         print("%sj = %d  ;  time_slice_labels[j] = %s" % (prnt_prfx, j, time_slice_labels[j]))
         print("%s  plot_dir = %s" % (prnt_prfx, plot_dir))
         comp_dir = plot_dir + 'comp/' + time_slice_labels[j]
+        print("%s  comp_dir = %s" % (prnt_prfx, comp_dir))
+        #ccccccccccccccccccccc
 
         #make the directory for the current dataset
         try:
@@ -1379,11 +1509,24 @@ if(len(gmtb_scm_datasets) > 1):
             print("\n%s  Plotting mean profiles...\n" % (prnt_prfx))
             for k in range(len(profiles_mean['vars'])):
                 print("%s    k = %d  ;  profiles_mean['vars'][k] = %s" % (prnt_prfx, k, profiles_mean['vars'][k]))
+#                print("%s    locals() is:" % (prnt_prfx))
+#                print(locals()['qv'])
+#                print("HHHHHHHHHHHHHHHHHHHHH")
+#                print(np.array(locals()['qv']))
+#                quit()
                 #get the python variable associated with the vars listed in the config file
                 if(profiles_mean['vars'][k] in locals()):
+                    print("@@@@@@@@@@@@ k = %d;  profiles_mean['vars'][k] = %s" % (k, profiles_mean['vars'][k]))
                     data = np.array(locals()[profiles_mean['vars'][k]])
                     if (profiles_mean['vars'][k] in inst_time_group):
                         #print("{} in time group inst".format(profiles_mean['vars'][k]))
+                        print("##### time_slice_indices_inst[j][0] = %s" % (time_slice_indices_inst[j][0]))
+                        print("##### time_slice_indices_inst[j][1] = %s" % (time_slice_indices_inst[j][1]))
+                        print("##### type(data) = %s" % (type(data)))
+                        print("##### data.ndim = %d" % (data.ndim))
+                        #print("##### data.shape = %d" % (data.shape))
+                        print("##### data.shape is:")
+                        print(data.shape)
                         data_time_slice = data[:,time_slice_indices_inst[j][0]:time_slice_indices_inst[j][1],:,:]
                     elif (profiles_mean['vars'][k] in diag_time_group):
                         #print("{} in time group diag".format(profiles_mean['vars'][k]))
@@ -1404,10 +1547,14 @@ if(len(gmtb_scm_datasets) > 1):
                         conversion_factor = 1.0
                     
                     #mean profile is obtained by averaging over dimensions 0 and 2
+                    #GSK:  I think these dimensions correspond to time and horizontal column index, respectively.
+                    #      The times considered are the ones between the "start" and "end" parameters specified
+                    #      under the time_slices section (which currently contains one time slice named "total").
                     mean_data = []
                     for i in range(len(gmtb_scm_datasets)):
                         mean_data.append(np.mean(data_time_slice[i,:,:,:], (0,2)))
 
+                    # Plot includes observations.
                     if(obs_compare and profiles_mean['vars'][k] in obs_dict):
                         obs_data = np.array(obs_dict[profiles_mean['vars'][k]])
                         obs_data_time_slice = obs_data[obs_dict['time_slice_indices'][j][0]:obs_dict['time_slice_indices'][j][1],:]
@@ -1423,6 +1570,7 @@ if(len(gmtb_scm_datasets) > 1):
                                 bias_data.append(interp_values - obs_mean_data)
                             gspr.plot_profile_multi(obs_vert_axis, bias_data, gmtb_scm_datasets_labels, label + ' bias', vert_axis_label_pm, comp_dir + '/profiles_bias_' + profiles_mean['vars'][k] + plot_ext, y_inverted=y_inverted_val_pm, y_log=y_log_val_pm, y_lim=y_lim_val, line_type='color', zero_line=True, conversion_factor=conversion_factor)
 
+                    # Plot doesn't include observations.
                     else:
                         gspr.plot_profile_multi(vert_axis, mean_data, gmtb_scm_datasets_labels, label, vert_axis_label_pm, comp_dir + '/profiles_mean_' + profiles_mean['vars'][k] + plot_ext, y_inverted=y_inverted_val_pm, y_log=y_log_val_pm, y_lim=y_lim_val, line_type='color',skill_scores=skill_scores_val, conversion_factor=conversion_factor)
                 else:
@@ -1479,6 +1627,7 @@ if(len(gmtb_scm_datasets) > 1):
 
         ### Time-Series ###
         for k in range(len(time_series['vars'])):
+            print("%sAttempting to generate a time-series plot for variable %s..." % (prnt_prfx, time_series['vars'][k]))
             if(time_series['vars'][k] in locals()):
                 if(time_series['levels']):                        
                     if (time_series['levels'][k] == -999):
@@ -1578,16 +1727,20 @@ if(len(gmtb_scm_datasets) > 1):
                                 data_time_slice_series = pd.Series(data_time_slice[i,:,0], index = data_date_range)
                                 data_time_slice_series_rs.append(data_time_slice_series.resample(resample_string).mean())
 
+                            print("%sGenerating a time-series plot (with observations and resampling, case 1) for variable %s..." % (prnt_prfx, time_series['vars'][k]))
                             gspr.plot_time_series_multi(obs_date_range, data_time_slice_series_rs, gmtb_scm_datasets_labels, 'date', label, comp_dir + '/time_series_' + plot_name + plot_ext, obs_time = obs_date_range, obs_values = obs_data_time_slice, line_type='color',skill_scores=skill_scores_val, conversion_factor=conversion_factor)
                         elif(obs_delta_seconds < data_delta_seconds):
                             print('The case where observations are more frequent than model output has not been implmented yet... ')
                         else:
                             obs_time_time_slice = obs_dict['time_h'][obs_dict['time_slice_indices'][j][0]:obs_dict['time_slice_indices'][j][1]]
+                            print("%sGenerating a time-series plot (with observations and resampling, case 3) for variable %s..." % (prnt_prfx, time_series['vars'][k]))
                             gspr.plot_time_series_multi(time_h_slice, data_time_slice, gmtb_scm_datasets_labels, 'time (h)', label, comp_dir + '/time_series_' + plot_name + plot_ext, obs_time = obs_time_time_slice, obs_values = obs_data_time_slice, line_type='color',skill_scores=skill_scores_val, conversion_factor=conversion_factor)
                     else:
                         obs_time_time_slice = obs_dict['time_h'][obs_dict['time_slice_indices'][j][0]:obs_dict['time_slice_indices'][j][1]]
+                        print("%sGenerating a time-series plot (with observations) for variable %s..." % (prnt_prfx, time_series['vars'][k]))
                         gspr.plot_time_series_multi(time_h_slice, data_time_slice, gmtb_scm_datasets_labels, 'time (h)', label, comp_dir + '/time_series_' + plot_name + plot_ext, obs_time = obs_time_time_slice, obs_values = obs_data_time_slice, line_type='color',skill_scores=skill_scores_val, conversion_factor=conversion_factor)
                 else:
+                    print("%sGenerating a time-series plot (without observations) for variable %s..." % (prnt_prfx, time_series['vars'][k]))
                     gspr.plot_time_series_multi(time_h_slice, data_time_slice, gmtb_scm_datasets_labels, 'time (h)', label, comp_dir + '/time_series_' + plot_name + plot_ext, line_type='color',skill_scores=skill_scores_val, conversion_factor=conversion_factor)
             else:
                 print('The variable ' + time_series['vars'][k] + ' found in ' + args.config[0] + ' in the time_series section is invalid.')
