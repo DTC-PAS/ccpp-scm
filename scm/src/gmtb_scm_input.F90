@@ -30,6 +30,7 @@ contains
 !! requires that the compiler supports this standard.
 subroutine get_config_nml(scm_state)
   use gmtb_scm_type_defs, only : scm_state_type
+  use NetCDF_read, only: missing_value
 
   type(scm_state_type), target, intent(inout) :: scm_state
 
@@ -121,6 +122,7 @@ subroutine get_config_nml(scm_state)
   day = 19
   hour = 3
   min = 0
+  column_area = missing_value
   input_type = 0
   
   open(unit=10, file=experiment_namelist, status='old', action='read', iostat=ioerror)

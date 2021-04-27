@@ -22,6 +22,7 @@ contains
 !> Subroutine to interpolate the initial conditions to the model grid and set the state variables.
 subroutine set_state(scm_input, scm_reference, scm_state)
   use gmtb_scm_type_defs, only : scm_input_type, scm_reference_type, scm_state_type
+  use NetCDF_read, only: missing_value
 
   type(scm_input_type), intent(in) :: scm_input
   type(scm_reference_type), intent(in) :: scm_reference
@@ -160,8 +161,16 @@ subroutine set_state(scm_input, scm_reference, scm_state)
         scm_state%state_T(i,:,1) = scm_input%input_temp(:)
         scm_state%state_tracer(i,:,scm_state%water_vapor_index,1)=scm_input%input_qt
         scm_state%state_tracer(i,:,scm_state%ozone_index,1)=scm_input%input_ozone
-        scm_state%area(i) = scm_input%input_area    
-        
+        ! Reset scm_state%area(i) to the value in the scm_input%input_area (which 
+        ! was read in from a model output file, e.g. from an FV3LAM grid file) 
+        ! only if the current value in scm_state%area(i) is equal to missing_value 
+        ! (which means it was not explicitly specified in the case namelist). 
+        if (scm_state%area(i) .eq. missing_value) then
+          print *, 'scm_state%area(i) for i = ', i, ' is not set to a valid value; resetting it to scm_input%area...'
+          scm_state%area(i) = scm_input%input_area
+        endif
+        print *, 'i = ', i, ' of ', scm_state%n_cols, ';  scm_state%area(i) = ', scm_state%area(i)
+
         if (scm_input%input_pres_i(1).GT. 0.0) then ! pressure are read in, overwrite values
            scm_state%pres_i(i,:)=scm_input%input_pres_i
            scm_state%pres_l(i,:)=scm_input%input_pres_l
