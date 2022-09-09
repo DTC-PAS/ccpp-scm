@@ -58,6 +58,7 @@ suite_list.append(suite('SCM_GFS_v15p2_saYSU',   'tracers_GFS_v15p2.txt',       
 suite_list.append(suite('SCM_GFS_v15p2_ACM',     'tracers_GFS_v15p2.txt',                'input_GFS_v15p2_ACM.nml',           600.0, 1800.0, False))
 suite_list.append(suite('SCM_GFS_v16_RRTMGP',    'tracers_GFS_v16.txt',                  'input_GFS_v16_RRTMGP.nml',          600.0, 1800.0, False))
 suite_list.append(suite('SCM_GFS_v16_no_nsst',   'tracers_GFS_v16.txt',                  'input_GFS_v16.nml',                 600.0, 1800.0, False))
+suite_list.append(suite('SCM_GFS_v17_p8_RRTMGP', 'tracers_GFS_v17_p8.txt',               'input_GFS_v17_p8_RRTMGP.nml',       600.0, 600.0,  False))
 suite_list.append(suite('HAFS_v0_hwrf',          'tracers_HAFS_v0_hwrf.txt',             'input_HAFS_v0_hwrf.nml',            600.0, 1800.0, False))
 suite_list.append(suite('HAFS_v0_hwrf_thompson', 'tracers_HAFS_v0_hwrf_thompson.txt',    'input_HAFS_v0_hwrf_thompson.nml',   600.0, 600.0 , False))
 suite_list.append(suite('SCM_GSD_v1nssl',        'tracers_gsd_nssl.txt',                 'input_GSD_v1nssl.nml',              600.0, 600.0 , False))
